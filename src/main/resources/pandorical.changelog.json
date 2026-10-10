@@ -1,0 +1,14 @@
+{
+	"overview": [
+		"A camera and film: take a picture of exactly what you see.",
+		"Develop it in a water cauldron, in a room lit only by redstone, and hang the print on a wall."
+	],
+	"versions": {
+		"1.0.0": [
+			"Craft a camera and film, and take pictures of what you see.",
+			"Develop the film in a water cauldron in a darkroom lit only by redstone light.",
+			"Let other light in while it develops and the film is lost.",
+			"Hang the photograph on a wall, two blocks by two."
+		]
+	}
+}

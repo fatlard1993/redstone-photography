@@ -1,0 +1,95 @@
+plugins {
+	id 'net.fabricmc.fabric-loom' version '1.17.17'
+}
+
+version = project.mod_version
+group = project.maven_group
+
+base {
+	archivesName = project.mod_id
+}
+
+repositories {
+}
+
+dependencies {
+	minecraft "com.mojang:minecraft:${project.minecraft_version}"
+	implementation "net.fabricmc:fabric-loader:${project.loader_version}"
+	implementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_version}"
+
+	implementation(project(':pandorical'))
+}
+
+// Fabric tests these predicates against the loader's *normalized* game version,
+// not Mojang's id: 26.3-snapshot-10 is compared as 26.3-alpha.10. So a floor of
+// ">=26.3" is false on every 26.3 snapshot, and writing the obvious thing makes
+// the mod refuse to load on the version it was built for. Derived from the pin
+// rather than written into the manifest, so the two cannot drift apart.
+def mcFloor = project.minecraft_version
+	.replaceFirst(/-snapshot-/, '-alpha.')
+	.replaceFirst(/-pre-/, '-pre.')
+	.replaceFirst(/-rc-/, '-rc.')
+// The trailing dash is load-bearing: "<26.4" would still admit 26.4's snapshots,
+// because a prerelease sorts below its own release.
+def mcParts = mcFloor.tokenize('.-')
+def minecraftDependency = ">=${mcFloor} <${mcParts[0]}.${(mcParts[1] as int) + 1}-"
+// The +26.3 build tag is ignored in comparison; the floor is the number.
+def fabricApiFloor = ">=" + project.fabric_version.replaceFirst(/\+.*$/, '')
+
+processResources {
+	inputs.property "version", project.version
+	inputs.property "minecraftDependency", minecraftDependency
+	inputs.property "loaderVersion", project.loader_version
+	inputs.property "fabricApiVersion", fabricApiFloor
+
+	filesMatching("fabric.mod.json") {
+		expand "version": project.version,
+		       "minecraftDependency": minecraftDependency,
+		       "loaderVersion": project.loader_version,
+		       "fabricApiVersion": fabricApiFloor
+	}
+}
+
+tasks.withType(JavaCompile).configureEach {
+	it.options.release = 25
+}
+
+java {
+	withSourcesJar()
+}
+
+jar {
+	from("LICENSE") {
+		rename { "${it}_${project.base.archivesName.get()}"}
+	}
+	// The readme rides in the jar beside the licence, so a server can show it in-game.
+	from("README.md") {
+		rename { "README_${project.base.archivesName.get()}.md" }
+	}
+}
+
+// src/gametest: the camera taking a real picture, developed and hung. It opens a window:
+// The game window is 854x480 unless it is told otherwise, and a screenshot taken larger than the
+// window leaves the HUD and any open screen laid out for the small one: the hotbar ends up a
+// postage stamp in the top left corner. Size the window to the picture instead, and run under an
+// xvfb screen at least as big: xvfb-run -a -s "-screen 0 2048x1152x24" ./gradlew runClientGameTest
+tasks.matching { it.name == "runClientGameTest" }.configureEach {
+	// Silent: OpenAL's null device, the same as gametest.gradle gives the rest of the suite.
+	environment("ALSOFT_DRIVERS", "null")
+	systemProperty("pandorical.pictures", project.hasProperty("pictures"))
+	args("--width", "1920", "--height", "1080")
+}
+
+// run it under xvfb-run.
+fabricApi {
+	configureTests {
+		createSourceSet = true
+		modId = "redstone-photography-gametest"
+		enableGameTests = false
+		enableClientGameTests = true
+		eula = true
+	}
+}
+
+// Pandorical's test kit, Pictures included.
+apply from: file("../pandorical/testsupport.gradle")
