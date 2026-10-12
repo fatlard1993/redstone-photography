@@ -103,6 +103,26 @@ public final class Darkroom implements FabricClientGameTest {
 			});
 			if (clear != null) throw new AssertionError("the redstone-lit room is not a darkroom: " + clear);
 
+			// A light under the floor, sealed off by the solid top of a slab, is no leak.
+			server.runCommand("setblock %d %d %d minecraft:smooth_stone_slab[type=top]".formatted(x + 2, y + dy, z + 2));
+			server.runCommand("setblock %d %d %d minecraft:glowstone".formatted(x + 2, y + dy - 1, z + 2));
+			context.waitTicks(20);
+			String underSlab = server.computeOnServer(s -> {
+				var problem = justfatlard.redstone_photography.Darkroom.problem(s.overworld(), cauldron);
+				return problem == null ? null : problem.getString();
+			});
+			if (underSlab != null) throw new AssertionError("a light under a slab floor spoiled the room: " + underSlab);
+			server.runCommand("setblock %d %d %d minecraft:air".formatted(x + 2, y + dy, z + 2));
+			context.waitTicks(20);
+			String throughHole = server.computeOnServer(s -> {
+				var problem = justfatlard.redstone_photography.Darkroom.problem(s.overworld(), cauldron);
+				return problem == null ? null : problem.getString();
+			});
+			if (throughHole == null || !throughHole.contains("Glowstone")) throw new AssertionError("a light under a hole in the floor went unnoticed: " + throughHole);
+			server.runCommand("setblock %d %d %d minecraft:stone".formatted(x + 2, y + dy, z + 2));
+			server.runCommand("setblock %d %d %d minecraft:air".formatted(x + 2, y + dy - 1, z + 2));
+			context.waitTicks(20);
+
 			// Develop: the exposed film into the cauldron, by hand.
 			server.runOnServer(s -> {
 				ServerPlayer player = connection.getServerPlayer();

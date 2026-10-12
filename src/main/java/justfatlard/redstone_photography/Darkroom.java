@@ -12,14 +12,16 @@ import net.minecraft.tags.TagKey;
 import net.minecraft.world.level.LightLayer;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.lighting.LightEngine;
 
 /**
  * Whether a cauldron stands in a darkroom: no daylight reaching it, and lit, but only by redstone
  * light (the blocks tagged {@code redstone-photography:safelights}).
  *
- * <p>Light is followed back from the cauldron the way it spreads, losing a level a block and more
- * through what dims it, and stopped by what it cannot pass. So a torch on the far side of a wall
- * does not spoil a darkroom, and one round the corner of an open door does.
+ * <p>Light is followed back from the cauldron the way the game spreads it, losing a level a block
+ * and more through what dims it, and stopped by what it cannot pass: a solid block, or the solid
+ * face of a slab or stair. So a torch on the far side of a wall or under a slab floor does not
+ * spoil a darkroom, and one round the corner of an open door does.
  */
 public final class Darkroom {
 	private Darkroom() {}
@@ -50,16 +52,17 @@ public final class Darkroom {
 			return Component.translatableWithFallback("redstone-photography.darkroom.daylight",
 				"Daylight gets in here: develop film in a closed room.");
 		}
-		BlockState leak = leak(level, air);
+		BlockPos leak = leak(level, air);
 		if (leak != null) {
 			return Component.translatableWithFallback("redstone-photography.darkroom.light_leak",
-				"%s lights this room: only redstone light is safe for film.", leak.getBlock().getName());
+				"%s at %s, %s, %s lights this room: only redstone light is safe for film.",
+				level.getBlockState(leak).getBlock().getName(), leak.getX(), leak.getY(), leak.getZ());
 		}
 		return null;
 	}
 
-	/** A light other than a safelight that reaches {@code from}, or null. */
-	private static BlockState leak(ServerLevel level, BlockPos from) {
+	/** Where a light other than a safelight that reaches {@code from} stands, or null. */
+	private static BlockPos leak(ServerLevel level, BlockPos from) {
 		// Searched by what light would lose getting here, least first
 		LongArrayList[] byLoss = new LongArrayList[BRIGHTEST];
 		for (int i = 0; i < BRIGHTEST; i++) byLoss[i] = new LongArrayList();
@@ -68,18 +71,21 @@ public final class Darkroom {
 		byLoss[0].add(from.asLong());
 		loss.put(from.asLong(), 0);
 
+		BlockPos.MutableBlockPos here = new BlockPos.MutableBlockPos();
 		BlockPos.MutableBlockPos next = new BlockPos.MutableBlockPos();
 		for (int lost = 0; lost < BRIGHTEST; lost++) {
 			LongArrayList queue = byLoss[lost];
 			for (int i = 0; i < queue.size(); i++) {
 				long at = queue.getLong(i);
 				if (loss.get(at) != lost) continue;
+				BlockState standing = level.getBlockState(here.set(at));
 				for (Direction direction : Direction.values()) {
 					next.set(at).move(direction);
 					if (!level.isLoaded(next)) continue;
 					BlockState state = level.getBlockState(next);
+					if (LightEngine.getLightDampeningInto(standing, state, direction, 0) > BRIGHTEST) continue;
 					int reaching = lost + 1;
-					if (state.getLightEmission() > reaching && !state.is(SAFELIGHTS)) return state;
+					if (state.getLightEmission() > reaching && !state.is(SAFELIGHTS)) return next.immutable();
 					int dims = state.getLightDampening();
 					if (dims >= BRIGHTEST) continue;
 					int through = lost + Math.max(1, dims);

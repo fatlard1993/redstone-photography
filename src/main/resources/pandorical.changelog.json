@@ -4,6 +4,10 @@
 		"Develop it in a water cauldron, in a room lit only by redstone, and hang the print on a wall."
 	],
 	"versions": {
+		"1.0.1": [
+			"Light behind the solid side of a slab or stair no longer spoils a darkroom; the game does not let it through either.",
+			"A light that does spoil one is named with where it stands, so it can be found."
+		],
 		"1.0.0": [
 			"Craft a camera and film, and take pictures of what you see.",
 			"Develop the film in a water cauldron in a darkroom lit only by redstone light.",

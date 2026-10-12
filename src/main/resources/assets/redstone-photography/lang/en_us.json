@@ -11,7 +11,7 @@
   "redstone-photography.film.taken_by": "Taken by %s",
   "redstone-photography.film.develop_hint": "Develop in a water cauldron, in a room lit only by redstone",
   "redstone-photography.darkroom.daylight": "Daylight gets in here: develop film in a closed room.",
-  "redstone-photography.darkroom.light_leak": "%s lights this room: only redstone light is safe for film.",
+  "redstone-photography.darkroom.light_leak": "%s at %s, %s, %s lights this room: only redstone light is safe for film.",
   "redstone-photography.darkroom.unlit": "Too dark to work: light the room with a redstone lamp or torch.",
   "redstone-photography.develop.busy": "A film is already developing in this cauldron.",
   "redstone-photography.develop.started": "Developing: keep other light out for %s seconds.",
