@@ -43,9 +43,9 @@ The safelights are the block tag `redstone-photography:safelights`: redstone lam
 
 ## Pandorical
 
-Redstone Photography runs server-side, and Pandorical 15.15.0 or later is required: the server will not load this mod without it. Pandorical syncs the items to connecting clients, and its client takes the pictures.
+Redstone Photography runs server-side, and Pandorical is required: the server will not load this mod without it. Pandorical syncs the items to connecting clients, and its client takes the pictures.
 
-Clients need Pandorical 15.15.0 or later to take pictures. Photographs on walls are maps in invisible item frames, which every client already knows how to draw.
+Clients need Pandorical to take pictures. Photographs on walls are maps in invisible item frames, which every client already knows how to draw.
 
 ## Development
 
