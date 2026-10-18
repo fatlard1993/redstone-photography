@@ -1,0 +1,10 @@
+{
+  "variants": {
+    "facing=north": { "model": "redstone-photography:block/camera" },
+    "facing=east": { "model": "redstone-photography:block/camera", "y": 90 },
+    "facing=south": { "model": "redstone-photography:block/camera", "y": 180 },
+    "facing=west": { "model": "redstone-photography:block/camera", "y": 270 },
+    "facing=up": { "model": "redstone-photography:block/camera", "x": 270 },
+    "facing=down": { "model": "redstone-photography:block/camera", "x": 90 }
+  }
+}

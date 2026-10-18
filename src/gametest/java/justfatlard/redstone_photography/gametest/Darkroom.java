@@ -1,9 +1,12 @@
 package justfatlard.redstone_photography.gametest;
 
+import justfatlard.redstone_photography.CameraBlock;
+import justfatlard.redstone_photography.CameraBlockEntity;
 import justfatlard.redstone_photography.Developing;
 import justfatlard.redstone_photography.Main;
 import justfatlard.redstone_photography.Photos;
 import justfatlard.redstone_photography.Prints;
+import justfatlard.redstone_photography.Roll;
 import net.fabricmc.fabric.api.client.gametest.v1.FabricClientGameTest;
 import net.fabricmc.fabric.api.client.gametest.v1.context.ClientGameTestContext;
 import net.fabricmc.fabric.api.client.gametest.v1.context.TestServerConnection;
@@ -11,10 +14,12 @@ import net.fabricmc.fabric.api.client.gametest.v1.context.TestServerContext;
 import net.fabricmc.fabric.api.client.gametest.v1.context.TestSingleplayerContext;
 import net.fabricmc.fabric.api.client.gametest.v1.screenshot.TestScreenshotOptions;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.item.ItemEntity;
+import net.minecraft.world.inventory.ContainerInput;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.phys.AABB;
@@ -34,6 +39,10 @@ import java.util.UUID;
 public final class Darkroom implements FabricClientGameTest {
 	private static final int WIDTH = 1920;
 	private static final int HEIGHT = 1080;
+	/** In the player's inventory menu: the first hotbar slot, and the first slot of the pack. */
+	private static final int HOTBAR_0 = 36;
+	private static final int INVENTORY_9 = 9;
+	private static final double SNEAKING_EYE = 1.27;
 
 	@Override
 	public void runTest(ClientGameTestContext context) {
@@ -60,24 +69,91 @@ public final class Darkroom implements FabricClientGameTest {
 				server.runCommand("fill %d %d %d %d %d %d minecraft:%s_wool".formatted(x - 5 + i * 2, y, z - 10, x - 4 + i * 2, y + 4, z - 10, wool));
 			}
 
-			// Shoot: camera in hand, film in the pack.
+			// Load: two film clicked onto the camera, as onto a bundle. Then shoot.
 			hold(server, connection, new ItemStack(Main.CAMERA));
-			server.runOnServer(s -> connection.getServerPlayer().getInventory().setItem(9, new ItemStack(Main.FILM, 2)));
+			server.runOnServer(s -> {
+				ServerPlayer player = connection.getServerPlayer();
+				player.getInventory().setItem(9, new ItemStack(Main.FILM, 2));
+				player.inventoryMenu.clicked(INVENTORY_9, 0, ContainerInput.PICKUP, player);
+				player.inventoryMenu.clicked(HOTBAR_0, 0, ContainerInput.PICKUP, player);
+				if (!player.inventoryMenu.getCarried().isEmpty()) throw new AssertionError("film clicked onto the camera stayed on the cursor");
+				if (count(player, Main.FILM) != 0) throw new AssertionError("film clicked onto the camera stayed in the inventory");
+			});
 			look(server, x + 0.5, y, z + 0.5, x + 0.5, y + 2, z - 10);
 			context.waitTicks(20);
 			context.getInput().pressKey(options -> options.keyUse);
 			context.waitTicks(60);
 
+			// Out: a right click on the camera with nothing held takes the exposed film.
 			UUID photo = server.computeOnServer(s -> {
 				ServerPlayer player = connection.getServerPlayer();
-				if (count(player, Main.FILM) != 1) throw new AssertionError("the shot did not use one film: " + count(player, Main.FILM) + " left");
+				Roll roll = Roll.read(player.getInventory().getItem(0));
+				if (roll.blank() != 1 || roll.exposed().size() != 1) throw new AssertionError("after the shot the camera holds " + roll);
+				player.inventoryMenu.clicked(HOTBAR_0, 1, ContainerInput.PICKUP, player);
+				player.inventoryMenu.clicked(INVENTORY_9, 0, ContainerInput.PICKUP, player);
 				ItemStack exposed = find(player, Main.EXPOSED_FILM);
-				if (exposed.isEmpty()) throw new AssertionError("no exposed film after the shot");
+				if (exposed.isEmpty()) throw new AssertionError("no exposed film taken out of the camera");
+				if (!Roll.read(player.getInventory().getItem(0)).exposed().isEmpty()) throw new AssertionError("the exposure stayed in the camera too");
 				return justfatlard.redstone_photography.Film.read(exposed).photo();
 			});
 			File file = server.computeOnServer(s -> Photos.file(s, photo).toFile());
 			BufferedImage kept = read(file);
 			if (kept.getWidth() != 512 || kept.getHeight() != 512) throw new AssertionError("kept picture is " + kept.getWidth() + "x" + kept.getHeight());
+
+			// Set down: sneaking, used against the floor ahead, the lens facing the way the player
+			// looks. Then a redstone block beside it takes a picture through the lens, drawn off the
+			// player's screen: it is the yellow wool straight ahead.
+			BlockPos placed = new BlockPos(x, y, z - 3);
+			context.getInput().holdKey(options -> options.keyShift);
+			context.waitTicks(5);
+			look(server, x + 0.5, y, z + 0.5, x + 0.5, y - 0.1, z - 2.5, SNEAKING_EYE);
+			context.waitTicks(20);
+			context.getInput().pressKey(options -> options.keyUse);
+			context.waitTicks(5);
+			context.getInput().releaseKey(options -> options.keyShift);
+			context.waitTicks(10);
+			server.runOnServer(s -> {
+				var state = s.overworld().getBlockState(placed);
+				if (!state.is(Main.CAMERA_BLOCK)) throw new AssertionError("no camera set down at " + placed + ", found " + state);
+				if (state.getValue(CameraBlock.FACING) != Direction.NORTH) throw new AssertionError("the camera faces " + state.getValue(CameraBlock.FACING));
+				if (!connection.getServerPlayer().getInventory().getItem(0).isEmpty()) throw new AssertionError("the camera stayed in hand as well");
+			});
+			server.runCommand("setblock %d %d %d minecraft:redstone_block".formatted(x + 1, y, z - 3));
+			context.waitTicks(60);
+			UUID still = server.computeOnServer(s -> {
+				Roll roll = ((CameraBlockEntity) s.overworld().getBlockEntity(placed)).roll();
+				if (roll.blank() != 0 || roll.exposed().size() != 1) throw new AssertionError("after redstone the camera holds " + roll);
+				return roll.last().photo();
+			});
+			BufferedImage through = read(server.computeOnServer(s -> Photos.file(s, still).toFile()));
+			// Above the middle: the lens is half a block off the floor, and the wool's foot is shaded
+			int middle = through.getRGB(256, 128);
+			int r = middle >> 16 & 0xFF, g = middle >> 8 & 0xFF, b = middle & 0xFF;
+			if (r < 150 || g < 120 || b > 110) throw new AssertionError("the lens did not see the yellow wool ahead: rgb " + r + ", " + g + ", " + b);
+
+			// Out by hand, then broken: it comes back as a camera, empty.
+			look(server, x + 0.5, y, z + 0.5, x + 0.5, y + 0.4, z - 2.5);
+			context.waitTicks(20);
+			context.getInput().pressKey(options -> options.keyUse);
+			context.waitTicks(10);
+			server.runOnServer(s -> {
+				ServerPlayer player = connection.getServerPlayer();
+				if (count(player, Main.EXPOSED_FILM) != 2) throw new AssertionError("the placed camera's film did not come out by hand");
+				for (int slot = 0; slot < player.getInventory().getContainerSize(); slot++) {
+					ItemStack stack = player.getInventory().getItem(slot);
+					if (stack.is(Main.EXPOSED_FILM) && justfatlard.redstone_photography.Film.read(stack).photo().equals(still)) {
+						player.getInventory().setItem(slot, ItemStack.EMPTY);
+					}
+				}
+			});
+			server.runCommand("setblock %d %d %d minecraft:air destroy".formatted(placed.getX(), placed.getY(), placed.getZ()));
+			server.runCommand("setblock %d %d %d minecraft:air".formatted(x + 1, y, z - 3));
+			context.waitTicks(5);
+			server.runOnServer(s -> {
+				var dropped = s.overworld().getEntitiesOfClass(ItemEntity.class, new AABB(placed).inflate(2), item -> item.getItem().is(Main.CAMERA));
+				if (dropped.size() != 1) throw new AssertionError("breaking the camera dropped " + dropped.size() + " cameras");
+				dropped.forEach(Entity::discard);
+			});
 
 			// A darkroom: a sealed stone box, a redstone lamp in its roof kept on by a block of
 			// redstone above, a water cauldron in the middle. And a torch, which spoils it.
@@ -240,7 +316,11 @@ public final class Darkroom implements FabricClientGameTest {
 
 	/** Stand at one place and look at another; y is the feet, the eye 1.62 above. */
 	private static void look(TestServerContext server, double x, double y, double z, double atX, double atY, double atZ) {
-		double dx = atX - x, dy = atY - (y + 1.62), dz = atZ - z;
+		look(server, x, y, z, atX, atY, atZ, 1.62);
+	}
+
+	private static void look(TestServerContext server, double x, double y, double z, double atX, double atY, double atZ, double eye) {
+		double dx = atX - x, dy = atY - (y + eye), dz = atZ - z;
 		double yaw = -Math.toDegrees(Math.atan2(dx, dz));
 		double pitch = -Math.toDegrees(Math.atan2(dy, Math.sqrt(dx * dx + dz * dz)));
 		server.runCommand("tp @a %.2f %.2f %.2f %.1f %.1f".formatted(x, y, z, yaw, pitch));

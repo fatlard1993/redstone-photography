@@ -1,5 +1,6 @@
 package justfatlard.redstone_photography;
 
+import justfatlard.pandorical.api.BlockRegistration;
 import justfatlard.pandorical.api.ItemRegistration;
 import justfatlard.pandorical.api.PandoricalApi;
 import net.fabricmc.api.ModInitializer;
@@ -21,6 +22,10 @@ import net.minecraft.world.entity.decoration.ItemFrame;
 import net.minecraft.world.item.CreativeModeTab;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.block.SoundType;
+import net.minecraft.world.level.block.entity.BlockEntityType;
+import net.minecraft.world.level.block.state.BlockBehaviour;
+import net.minecraft.world.level.material.MapColor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -37,6 +42,16 @@ public class Main implements ModInitializer {
 	public static final Identifier FILM_ID = Identifier.fromNamespaceAndPath(MOD_ID, "film");
 	public static final Identifier EXPOSED_FILM_ID = Identifier.fromNamespaceAndPath(MOD_ID, "exposed_film");
 	public static final Identifier PHOTOGRAPH_ID = Identifier.fromNamespaceAndPath(MOD_ID, "photograph");
+
+	public static final CameraBlock CAMERA_BLOCK = new CameraBlock(BlockBehaviour.Properties.of()
+		.setId(ResourceKey.create(Registries.BLOCK, CAMERA_ID))
+		.mapColor(MapColor.COLOR_BLACK)
+		.strength(1.5F)
+		.sound(SoundType.COPPER)
+		.noOcclusion());
+
+	public static final BlockEntityType<CameraBlockEntity> CAMERA_BLOCK_ENTITY =
+		new BlockEntityType<>(CameraBlockEntity::new, Set.of(CAMERA_BLOCK));
 
 	public static final Item CAMERA = new CameraItem(new Item.Properties()
 		.setId(ResourceKey.create(Registries.ITEM, CAMERA_ID))
@@ -60,6 +75,12 @@ public class Main implements ModInitializer {
 
 	@Override
 	public void onInitialize() {
+		PandoricalApi.content().registerBlock(CAMERA_ID.toString(), new BlockRegistration()
+			.baseBlock("minecraft:copper_block")
+			.interactive()
+			.strength(1.5F)
+			.requiresCorrectTool(false)
+			.model(MOD_ID + ":block/camera"));
 		PandoricalApi.content().registerItem(CAMERA_ID.toString(), new ItemRegistration()
 			.model(MOD_ID + ":item/camera").maxStackSize(1));
 		PandoricalApi.content().registerItem(FILM_ID.toString(), new ItemRegistration()
@@ -70,6 +91,8 @@ public class Main implements ModInitializer {
 			.model(MOD_ID + ":item/photograph").maxStackSize(1));
 		PandoricalApi.content().registerModAssets(MOD_ID);
 
+		Registry.register(BuiltInRegistries.BLOCK, CAMERA_ID, CAMERA_BLOCK);
+		Registry.register(BuiltInRegistries.BLOCK_ENTITY_TYPE, CAMERA_ID, CAMERA_BLOCK_ENTITY);
 		Registry.register(BuiltInRegistries.ITEM, CAMERA_ID, CAMERA);
 		Registry.register(BuiltInRegistries.ITEM, FILM_ID, FILM);
 		Registry.register(BuiltInRegistries.ITEM, EXPOSED_FILM_ID, EXPOSED_FILM);

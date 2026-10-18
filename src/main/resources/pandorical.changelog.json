@@ -4,6 +4,13 @@
 		"Develop it in a water cauldron, in a room lit only by redstone, and hang the print on a wall."
 	],
 	"versions": {
+		"1.1.0": [
+			"Film is loaded into the camera: click film onto it in your inventory, as into a bundle. It holds 16 film, blank and exposed together.",
+			"Exposed film stays in the camera until you right-click the camera with nothing held to take it out.",
+			"Sneak and right-click a block to set the camera down, facing the way you look. Power it with redstone and it takes a picture through its lens.",
+			"Use film on a placed camera to load it, and an empty hand to take its exposed film out. Broken, it drops with its film inside.",
+			"A placed camera's picture is drawn by the nearest player's game, unseen; they need Pandorical 15.22 or later."
+		],
 		"1.0.1": [
 			"Light behind the solid side of a slab or stair no longer spoils a darkroom; the game does not let it through either.",
 			"A light that does spoil one is named with where it stands, so it can be found."
