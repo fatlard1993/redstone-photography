@@ -1,0 +1,7 @@
+{
+  "items": [
+    "redstone-photography:camera"
+  ],
+  "style": "redstone-photography:crosshair/camera",
+  "policy": "always"
+}
