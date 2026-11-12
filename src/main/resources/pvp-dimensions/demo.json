@@ -1,0 +1,49 @@
+{
+  "demo": {
+    "name": "Redstone Photography",
+    "icon": "redstone-photography:camera",
+    "about": [
+      "Take photographs with a camera and film, develop them in a cauldron in a darkroom lit only by redstone, and hang the prints on a wall.",
+      "Click the film onto the camera to load it and right-click to take a picture, or sneak to set the camera down and fire it with a lever. Then build a closed room lit only by redstone, develop your film in the cauldron, and hang the print."
+    ]
+  },
+  "pvp_preset": 1,
+  "needs": ["redstone-photography"],
+  "preset": {
+    "name": "Redstone Photography",
+    "icon": "redstone-photography:camera",
+    "pvp": false,
+    "game_mode": "survival",
+    "entry_kit": [
+      {"slot": 0, "item": {"id": "redstone-photography:camera", "count": 1}},
+      {"slot": 1, "item": {"id": "redstone-photography:film", "count": 16}},
+      {"slot": 2, "item": {"id": "minecraft:stone_bricks", "count": 64}},
+      {"slot": 3, "item": {"id": "minecraft:cauldron", "count": 1}},
+      {"slot": 4, "item": {"id": "minecraft:water_bucket", "count": 1}},
+      {"slot": 5, "item": {"id": "minecraft:redstone_torch", "count": 8}},
+      {"slot": 6, "item": {"id": "minecraft:redstone_lamp", "count": 4}},
+      {"slot": 7, "item": {"id": "minecraft:lever", "count": 4}},
+      {"slot": 8, "item": {"id": "minecraft:cooked_beef", "count": 8}},
+      {"slot": 9, "item": {"id": "minecraft:stone_bricks", "count": 64}},
+      {"slot": 10, "item": {"id": "minecraft:oak_door", "count": 1}},
+      {"slot": 11, "item": {"id": "minecraft:redstone", "count": 32}},
+      {"slot": 12, "item": {"id": "minecraft:repeater", "count": 4}},
+      {"slot": 13, "item": {"id": "minecraft:stone_button", "count": 4}},
+      {"slot": 14, "item": {"id": "minecraft:piston", "count": 4}},
+      {"slot": 15, "item": {"id": "minecraft:observer", "count": 2}},
+      {"slot": 16, "item": {"id": "minecraft:red_wool", "count": 16}},
+      {"slot": 17, "item": {"id": "minecraft:yellow_wool", "count": 16}},
+      {"slot": 18, "item": {"id": "minecraft:blue_wool", "count": 16}},
+      {"slot": 19, "item": {"id": "minecraft:iron_pickaxe", "count": 1}}
+    ],
+    "respawn_kit": "entry",
+    "goal": "time",
+    "mobs": "off",
+    "life": 15,
+    "size": 3,
+    "world": "overworld",
+    "shape": "natural",
+    "biome": "minecraft:cherry_grove",
+    "weather": "clear"
+  }
+}
