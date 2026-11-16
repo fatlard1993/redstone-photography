@@ -127,7 +127,10 @@ public class Main implements ModInitializer {
 		});
 		ServerEntityEvents.ENTITY_UNLOAD.register((entity, level) -> {
 			if (entity instanceof ItemFrame frame) FRAMES.remove(frame);
-			else if (entity instanceof Display.ItemDisplay display) DEVELOPING.remove(display);
+			else if (entity instanceof Display.ItemDisplay display) {
+				DEVELOPING.remove(display);
+				Developing.forget(display);
+			}
 		});
 		ServerLifecycleEvents.SERVER_STOPPED.register(server -> Developing.forget());
 		ServerTickEvents.END_SERVER_TICK.register(server -> {

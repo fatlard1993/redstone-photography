@@ -60,6 +60,10 @@ public final class Developing {
 		PRINTING.clear();
 	}
 
+	static void forget(Display.ItemDisplay tray) {
+		PRINTING.remove(tray.getUUID());
+	}
+
 	static InteractionResult use(ServerLevel level, BlockPos pos, Player player, InteractionHand hand) {
 		BlockState state = level.getBlockState(pos);
 		if (!state.is(Blocks.WATER_CAULDRON)) return InteractionResult.PASS;
@@ -158,10 +162,7 @@ public final class Developing {
 			developed = Photos.develop(server, exposure.photo());
 			PRINTING.put(tray.getUUID(), developed);
 			// Queued rather than executed, which would run at once when already on the server thread
-			developed.whenComplete((colors, error) -> server.schedule(server.wrapRunnable(() -> {
-				if (tray.isRemoved()) PRINTING.remove(tray.getUUID());
-				else check(level, tray);
-			})));
+			developed.whenComplete((colors, error) -> server.schedule(server.wrapRunnable(() -> check(level, tray))));
 		}
 		if (!developed.isDone()) return;
 		PRINTING.remove(tray.getUUID());
