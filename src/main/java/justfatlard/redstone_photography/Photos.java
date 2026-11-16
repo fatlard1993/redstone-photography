@@ -2,6 +2,7 @@ package justfatlard.redstone_photography;
 
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.util.Util;
 import net.minecraft.world.level.material.MapColor;
 import net.minecraft.world.level.saveddata.maps.MapId;
 import net.minecraft.world.level.saveddata.maps.MapItemSavedData;
@@ -16,6 +17,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
 
 /**
  * The pictures themselves: kept on the server as PNG files in the world's
@@ -55,20 +57,29 @@ public final class Photos {
 	}
 
 	/**
-	 * Print a photo onto fresh locked maps, in reading order: the picture scaled to the print and
-	 * dithered into map colours. Null if the file is gone or unreadable.
+	 * A photo scaled to the print and dithered into map colours, read and worked out off the
+	 * server thread. Completes with null if the file is gone or unreadable.
 	 */
-	static int[] print(ServerLevel level, UUID photo) {
-		BufferedImage image;
-		try {
-			image = ImageIO.read(file(level.getServer(), photo).toFile());
-		} catch (IOException e) {
-			LOGGER.warn("Could not read photo {}", photo, e);
+	static CompletableFuture<byte[]> develop(MinecraftServer server, UUID photo) {
+		Path file = file(server, photo);
+		return CompletableFuture.supplyAsync(() -> {
+			BufferedImage image;
+			try {
+				image = ImageIO.read(file.toFile());
+			} catch (IOException e) {
+				LOGGER.warn("Could not read photo {}", photo, e);
+				return null;
+			}
+			if (image == null) return null;
+			return dither(scale(image, PRINT_SIDE));
+		}, Util.backgroundExecutor()).exceptionally(e -> {
+			LOGGER.warn("Could not develop photo {}", photo, e);
 			return null;
-		}
-		if (image == null) return null;
-		byte[] colors = dither(scale(image, PRINT_SIDE));
+		});
+	}
 
+	/** Print developed colours onto fresh locked maps, in reading order. */
+	static int[] print(ServerLevel level, byte[] colors) {
 		int[] maps = new int[TILES_ACROSS * TILES_ACROSS];
 		for (int row = 0; row < TILES_ACROSS; row++) {
 			for (int column = 0; column < TILES_ACROSS; column++) {

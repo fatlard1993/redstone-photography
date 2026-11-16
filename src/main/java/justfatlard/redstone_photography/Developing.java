@@ -5,6 +5,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.network.chat.Component;
+import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
@@ -29,7 +30,11 @@ import net.minecraft.world.phys.Vec3;
 import org.joml.Quaternionf;
 import org.joml.Vector3f;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
 
 /**
  * Film developing in a water cauldron. The film floats on the water as an item display, which is
@@ -44,8 +49,15 @@ public final class Developing {
 	public static final int DEVELOP_TICKS = 200;
 	private static final int TELL_WITHIN = 16;
 
+	/** Trays whose film is done, by entity id, while their picture is worked out off the server thread. */
+	private static final Map<UUID, CompletableFuture<byte[]>> PRINTING = new HashMap<>();
+
 	public static boolean isTray(Entity entity) {
 		return entity instanceof Display.ItemDisplay && entity.entityTags().contains(TRAY_TAG);
+	}
+
+	static void forget() {
+		PRINTING.clear();
 	}
 
 	static InteractionResult use(ServerLevel level, BlockPos pos, Player player, InteractionHand hand) {
@@ -140,13 +152,28 @@ public final class Developing {
 			return;
 		}
 
+		CompletableFuture<byte[]> developed = PRINTING.get(tray.getUUID());
+		if (developed == null) {
+			MinecraftServer server = level.getServer();
+			developed = Photos.develop(server, exposure.photo());
+			PRINTING.put(tray.getUUID(), developed);
+			// Queued rather than executed, which would run at once when already on the server thread
+			developed.whenComplete((colors, error) -> server.schedule(server.wrapRunnable(() -> {
+				if (tray.isRemoved()) PRINTING.remove(tray.getUUID());
+				else check(level, tray);
+			})));
+		}
+		if (!developed.isDone()) return;
+		PRINTING.remove(tray.getUUID());
+		byte[] colors = developed.join();
+
 		tray.discard();
-		int[] maps = Photos.print(level, exposure.photo());
-		if (maps == null) {
+		if (colors == null) {
 			tellNear(level, pos, Component.translatableWithFallback("redstone-photography.develop.blank",
 				"The film came out blank: the picture it held is gone from the server."));
 			return;
 		}
+		int[] maps = Photos.print(level, colors);
 		LayeredCauldronBlock.lowerFillLevel(state, level, pos);
 		level.playSound(null, pos, SoundEvents.BOOK_PAGE_TURN, SoundSource.BLOCKS, 1.0F, 1.0F);
 		pop(level, pos, Prints.photograph(new Prints.Print(exposure.photo(), exposure.by(), maps)));

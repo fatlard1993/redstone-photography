@@ -6,6 +6,7 @@ import justfatlard.pandorical.api.PandoricalApi;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.creativetab.v1.FabricCreativeModeTab;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerEntityEvents;
+import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
 import net.fabricmc.fabric.api.event.player.AttackEntityCallback;
 import net.fabricmc.fabric.api.event.player.UseBlockCallback;
@@ -128,6 +129,7 @@ public class Main implements ModInitializer {
 			if (entity instanceof ItemFrame frame) FRAMES.remove(frame);
 			else if (entity instanceof Display.ItemDisplay display) DEVELOPING.remove(display);
 		});
+		ServerLifecycleEvents.SERVER_STOPPED.register(server -> Developing.forget());
 		ServerTickEvents.END_SERVER_TICK.register(server -> {
 			if (server.getTickCount() % CHECK_EVERY_TICKS != 0) return;
 			for (ItemFrame frame : new ArrayList<>(FRAMES)) {
