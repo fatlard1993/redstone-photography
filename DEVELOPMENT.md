@@ -38,7 +38,9 @@ A film in a cauldron is an item display tagged `redstone-photography.developing`
 
 ## Printing
 
-A print is 256 map pixels square, two maps by two. The picture is box-averaged down to that and Floyd-Steinberg dithered onto every colour a map can show (each base colour at all four brightnesses), matched by redmean distance.
+A print is 256 map pixels square, two maps by two. The picture is box-averaged down to that and Floyd-Steinberg dithered onto every colour a map can show (each base colour at all four brightnesses), matched by redmean distance, each pixel held inside 0 to 255 as the error reaches it; an unclamped error runs off past the palette in a dark or blown-out picture, where redmean's weights turn negative and pick bright red.
+
+The photograph item's icon shows the print in small: `Photos.thumbnail` averages its maps down to 44 cells square and matches each to the nearest map colour, inside a four-cell paper border, under `redstone-photography:thumbnail` in its custom data. Pandorical's `pandorical:picture` item model draws it over the sprite from `pandorical/items_v2/photograph.json`; a client without Pandorical 15.35.1 shows the plain sprite. It is built from the maps, not the file, so a photograph taken down from a wall gets one too.
 
 ## On a wall
 

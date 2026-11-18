@@ -1,0 +1,13 @@
+{
+  "model": {
+    "type": "minecraft:composite",
+    "models": [
+      { "type": "minecraft:model", "model": "redstone-photography:item/photograph" },
+      {
+        "type": "minecraft:special",
+        "base": "redstone-photography:item/photograph",
+        "model": { "type": "pandorical:picture", "data": "redstone-photography:thumbnail", "from": [2, 1], "to": [15, 14] }
+      }
+    ]
+  }
+}

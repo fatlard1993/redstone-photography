@@ -42,9 +42,11 @@ public final class Prints {
 
 	// --- As an item ---
 
-	public static ItemStack photograph(Print print) {
+	public static ItemStack photograph(ServerLevel level, Print print) {
 		ItemStack stack = new ItemStack(Main.PHOTOGRAPH);
 		Film.write(stack, toTag(print));
+		CompoundTag thumbnail = Photos.thumbnail(level, print.maps());
+		if (thumbnail != null) CustomData.update(DataComponents.CUSTOM_DATA, stack, root -> root.put(Photos.THUMBNAIL_KEY, thumbnail));
 		stack.set(DataComponents.ITEM_NAME, Component.translatableWithFallback("redstone-photography.photograph.named",
 			"Photograph by %s", print.by()));
 		stack.set(DataComponents.LORE, new ItemLore(List.of(Film.grey(Component.translatableWithFallback(
@@ -156,7 +158,7 @@ public final class Prints {
 			hit.getBoundingBox().inflate(Photos.TILES_ACROSS),
 			frame -> isPrint(frame) && group.equals(tileData(frame).getStringOr("group", "")));
 		Print print = fromTag(data);
-		if (print != null && (by == null || !by.hasInfiniteMaterials())) hit.spawnAtLocation(level, photograph(print));
+		if (print != null && (by == null || !by.hasInfiniteMaterials())) hit.spawnAtLocation(level, photograph(level, print));
 		level.playSound(null, hit.getPos(), SoundEvents.PAINTING_BREAK, SoundSource.BLOCKS, 1.0F, 1.0F);
 		for (ItemFrame part : parts) part.discard();
 	}

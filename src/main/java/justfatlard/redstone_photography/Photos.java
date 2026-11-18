@@ -1,5 +1,6 @@
 package justfatlard.redstone_photography;
 
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.util.Util;
@@ -32,6 +33,14 @@ public final class Photos {
 	public static final int TILES_ACROSS = 2;
 	private static final int MAP_SIZE = 128;
 	public static final int PRINT_SIDE = TILES_ACROSS * MAP_SIZE;
+
+	/** Key in a photograph's custom data that Pandorical's {@code pandorical:picture} item model draws. */
+	public static final String THUMBNAIL_KEY = Main.MOD_ID + ":thumbnail";
+	/** Cells to a side of the icon's picture: four to each of the thirteen sprite pixels it covers. */
+	static final int THUMBNAIL_SIDE = 52;
+	/** A sprite pixel's worth of paper around it, as a print has. */
+	private static final int THUMBNAIL_BORDER = 4;
+	private static final int PAPER = 0xFFE9EAEB;
 
 	private static final int[] PACKED = mapColors();
 	private static final int[] PACKED_RGB = new int[PACKED.length];
@@ -71,7 +80,8 @@ public final class Photos {
 				return null;
 			}
 			if (image == null) return null;
-			return dither(scale(image, PRINT_SIDE));
+			int width = image.getWidth(), height = image.getHeight();
+			return dither(scale(image.getRGB(0, 0, width, height, null, 0, width), width, height, PRINT_SIDE));
 		}, Util.backgroundExecutor()).exceptionally(e -> {
 			LOGGER.warn("Could not develop photo {}", photo, e);
 			return null;
@@ -97,10 +107,52 @@ public final class Photos {
 		return maps;
 	}
 
+	/**
+	 * The print in small, for the photograph's icon: averaged down from its maps and each cell
+	 * matched to the nearest map colour, inside a paper border. Null if a map is gone.
+	 */
+	static CompoundTag thumbnail(ServerLevel level, int[] maps) {
+		int[] print = new int[PRINT_SIDE * PRINT_SIDE];
+		for (int tile = 0; tile < maps.length; tile++) {
+			MapItemSavedData data = level.getMapData(new MapId(maps[tile]));
+			if (data == null) return null;
+			int left = tile % TILES_ACROSS * MAP_SIZE, top = tile / TILES_ACROSS * MAP_SIZE;
+			for (int y = 0; y < MAP_SIZE; y++) {
+				for (int x = 0; x < MAP_SIZE; x++) {
+					print[left + x + (top + y) * PRINT_SIDE] = MapColor.getColorFromPackedId(data.colors[x + y * MAP_SIZE]) & 0xFFFFFF;
+				}
+			}
+		}
+
+		int inner = THUMBNAIL_SIDE - 2 * THUMBNAIL_BORDER;
+		int[] small = scale(print, PRINT_SIDE, PRINT_SIDE, inner);
+		int[] palette = new int[PACKED_RGB.length + 1];
+		int[] slot = new int[PACKED_RGB.length];
+		palette[0] = PAPER;
+		int used = 1;
+		byte[] cells = new byte[THUMBNAIL_SIDE * THUMBNAIL_SIDE];
+		for (int y = 0; y < inner; y++) {
+			for (int x = 0; x < inner; x++) {
+				int rgb = small[x + y * inner];
+				int best = nearest((rgb >> 16) & 0xFF, (rgb >> 8) & 0xFF, rgb & 0xFF);
+				if (slot[best] == 0) {
+					slot[best] = used;
+					palette[used++] = 0xFF000000 | PACKED_RGB[best];
+				}
+				cells[THUMBNAIL_BORDER + x + (THUMBNAIL_BORDER + y) * THUMBNAIL_SIDE] = (byte) slot[best];
+			}
+		}
+
+		CompoundTag tag = new CompoundTag();
+		tag.putInt("columns", THUMBNAIL_SIDE);
+		tag.putInt("rows", THUMBNAIL_SIDE);
+		tag.putIntArray("palette", Arrays.copyOf(palette, used));
+		tag.putByteArray("cells", cells);
+		return tag;
+	}
+
 	/** Each pixel the average of the pixels it covers. */
-	static int[] scale(BufferedImage image, int side) {
-		int width = image.getWidth(), height = image.getHeight();
-		int[] source = image.getRGB(0, 0, width, height, null, 0, width);
+	static int[] scale(int[] source, int width, int height, int side) {
 		int[] scaled = new int[side * side];
 		for (int y = 0; y < side; y++) {
 			int top = y * height / side, bottom = Math.max(top + 1, (y + 1) * height / side);

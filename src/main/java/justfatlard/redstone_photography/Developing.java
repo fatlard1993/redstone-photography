@@ -177,7 +177,7 @@ public final class Developing {
 		int[] maps = Photos.print(level, colors);
 		LayeredCauldronBlock.lowerFillLevel(state, level, pos);
 		level.playSound(null, pos, SoundEvents.BOOK_PAGE_TURN, SoundSource.BLOCKS, 1.0F, 1.0F);
-		pop(level, pos, Prints.photograph(new Prints.Print(exposure.photo(), exposure.by(), maps)));
+		pop(level, pos, Prints.photograph(level, new Prints.Print(exposure.photo(), exposure.by(), maps)));
 	}
 
 	private static Film.Exposure exposureOn(Display.ItemDisplay tray) {

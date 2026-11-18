@@ -256,7 +256,21 @@ public final class Darkroom implements FabricClientGameTest {
 				ItemStack copy = print.copy();
 				clearOf(player, Main.PHOTOGRAPH);
 				player.getInventory().setItem(0, copy);
+
+				// Its icon's picture: a paper border, and the print inside it.
+				var thumbnail = copy.getOrDefault(net.minecraft.core.component.DataComponents.CUSTOM_DATA,
+					net.minecraft.world.item.component.CustomData.EMPTY).copyTag().getCompoundOrEmpty(justfatlard.redstone_photography.Photos.THUMBNAIL_KEY);
+				int side = thumbnail.getIntOr("columns", 0);
+				byte[] cells = thumbnail.getByteArray("cells").orElse(new byte[0]);
+				int[] palette = thumbnail.getIntArray("palette").orElse(new int[0]);
+				if (side == 0 || cells.length != side * side) throw new AssertionError("the photograph carries no thumbnail for its icon: " + thumbnail);
+				if (cells[0] != 0 || palette[0] != 0xFFE9EAEB) throw new AssertionError("the thumbnail's corner is not its paper border");
+				boolean pictured = false;
+				for (int i = side * (side / 2); i < side * (side / 2 + 1); i++) pictured |= cells[i] != 0;
+				if (!pictured) throw new AssertionError("the thumbnail is all border, with no picture in it");
 			});
+			context.waitTicks(5);
+			context.takeScreenshot(TestScreenshotOptions.of("photograph-icon").withSize(WIDTH, HEIGHT).disableCounterPrefix());
 			server.runCommand("fill %d %d %d %d %d %d minecraft:stone_bricks".formatted(x - 3, y, z - 4, x + 3, y + 4, z - 4));
 			look(server, x + 0.5, y, z + 0.5, x + 0.5, y + 1.5, z - 3.5);
 			context.waitTicks(20);
