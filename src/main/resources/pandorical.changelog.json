@@ -4,6 +4,9 @@
 		"Develop it in a water cauldron, in a room lit only by redstone, and hang the print on a wall."
 	],
 	"versions": {
+		"1.1.7": [
+			"A dark or very bright picture develops into its print instead of red blobs."
+		],
 		"1.1.6": [
 			"A finished film is read and dithered into a print off the server thread, so developing one doesn't stall the server.",
 			"A film still being worked out when its tray is unloaded or lost is let go, not held until the server stops."
