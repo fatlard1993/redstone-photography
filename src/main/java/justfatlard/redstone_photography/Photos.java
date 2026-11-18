@@ -135,6 +135,9 @@ public final class Photos {
 		for (int y = 0; y < side; y++) {
 			for (int x = 0; x < side; x++) {
 				int i = x + y * side;
+				r[i] = Math.clamp(r[i], 0, 255);
+				g[i] = Math.clamp(g[i], 0, 255);
+				b[i] = Math.clamp(b[i], 0, 255);
 				int best = nearest(r[i], g[i], b[i]);
 				out[i] = (byte) PACKED[best];
 				int chosen = PACKED_RGB[best];
