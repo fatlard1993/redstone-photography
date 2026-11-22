@@ -3,7 +3,7 @@
 	"id": "redstone-photography",
 	"version": "${version}",
 	"name": "Redstone Photography",
-	"description": "A camera and film: take a picture of what you see or let redstone take one, develop it in a cauldron in a darkroom lit only by redstone, and hang the print on a wall (server-side with Pandorical)",
+	"description": "A camera and film: take pictures, develop them and hang them up",
 	"authors": [
 		"justfatlard"
 	],
