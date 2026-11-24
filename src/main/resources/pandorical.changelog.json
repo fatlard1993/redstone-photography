@@ -4,6 +4,9 @@
 		"Develop it in a water cauldron, in a room lit only by redstone, and hang the print on a wall."
 	],
 	"versions": {
+		"1.1.10": [
+			"Where each photo was taken, which way the camera faced, by whom and when are kept beside it, and can be listed for a map to pin."
+		],
 		"1.1.9": [
 			"Describes itself in one short line of what it adds."
 		],
