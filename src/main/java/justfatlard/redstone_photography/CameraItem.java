@@ -83,7 +83,10 @@ public class CameraItem extends Item {
 			return;
 		}
 		UUID photo = UUID.randomUUID();
-		if (!Photos.save(shooter.level().getServer(), photo, capture.get().png())) {
+		Photos.Shot shot = new Photos.Shot(photo, shooter.level().dimension().identifier().toString(),
+			shooter.getBlockX(), shooter.getBlockY(), shooter.getBlockZ(), shooter.getYRot(),
+			shooter.getName().getString(), System.currentTimeMillis());
+		if (!Photos.save(shooter.level().getServer(), shot, capture.get().png())) {
 			tell(shooter, Component.translatableWithFallback("redstone-photography.camera.not_saved",
 				"The picture could not be kept: the server could not save it."));
 			return;

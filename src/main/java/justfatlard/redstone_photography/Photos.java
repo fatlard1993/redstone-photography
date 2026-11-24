@@ -1,5 +1,6 @@
 package justfatlard.redstone_photography;
 
+import com.google.gson.Gson;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
@@ -15,8 +16,11 @@ import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
 import java.io.IOException;
 import java.nio.file.Files;
+import java.nio.file.DirectoryStream;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 
@@ -49,20 +53,53 @@ public final class Photos {
 		for (int i = 0; i < PACKED.length; i++) PACKED_RGB[i] = MapColor.getColorFromPackedId(PACKED[i]) & 0xFFFFFF;
 	}
 
+	/**
+	 * Where a photo was taken and by whom: the camera's position and the way it faced, in degrees as
+	 * an entity's yaw, and when, in epoch milliseconds. Kept beside the picture as {@code <id>.json}.
+	 */
+	public record Shot(UUID photo, String dimension, int x, int y, int z, float yaw, String by, long taken) {}
+
+	private static final Gson GSON = new Gson();
+
 	public static Path file(MinecraftServer server, UUID photo) {
-		return server.getWorldPath(LevelResource.ROOT).resolve(Main.MOD_ID).resolve(photo + ".png");
+		return folder(server).resolve(photo + ".png");
 	}
 
-	static boolean save(MinecraftServer server, UUID photo, byte[] png) {
-		Path file = file(server, photo);
+	private static Path folder(MinecraftServer server) {
+		return server.getWorldPath(LevelResource.ROOT).resolve(Main.MOD_ID);
+	}
+
+	static boolean save(MinecraftServer server, Shot shot, byte[] png) {
+		Path file = file(server, shot.photo());
 		try {
 			Files.createDirectories(file.getParent());
 			Files.write(file, png);
+			Files.writeString(file.resolveSibling(shot.photo() + ".json"), GSON.toJson(shot));
 			return true;
 		} catch (IOException e) {
 			LOGGER.warn("Could not save photo {}", file, e);
 			return false;
 		}
+	}
+
+	/** Every photo whose taking was recorded. Photos taken before it was are left out. Reads files. */
+	public static List<Shot> shots(MinecraftServer server) {
+		List<Shot> shots = new ArrayList<>();
+		Path folder = folder(server);
+		if (!Files.isDirectory(folder)) return shots;
+		try (DirectoryStream<Path> files = Files.newDirectoryStream(folder, "*.json")) {
+			for (Path file : files) {
+				try {
+					Shot shot = GSON.fromJson(Files.readString(file), Shot.class);
+					if (shot != null && shot.photo() != null) shots.add(shot);
+				} catch (Exception unreadable) {
+					LOGGER.warn("Could not read where photo {} was taken", file, unreadable);
+				}
+			}
+		} catch (IOException e) {
+			LOGGER.warn("Could not list photos in {}", folder, e);
+		}
+		return shots;
 	}
 
 	/**

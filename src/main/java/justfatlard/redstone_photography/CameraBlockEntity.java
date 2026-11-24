@@ -103,7 +103,7 @@ public class CameraBlockEntity extends BlockEntity {
 		level.playSound(null, worldPosition, SoundEvents.LEVER_CLICK, SoundSource.BLOCKS, 0.6F, 1.8F);
 		String by = owner.isEmpty() ? photographer.getName().getString() : owner;
 		PandoricalApi.capture().request(photographer, CameraItem.SIDE, eye, yRot, xRot)
-			.thenAccept(capture -> developed(level, by, capture));
+			.thenAccept(capture -> developed(level, by, yRot, capture));
 	}
 
 	/** The nearest player whose client has this camera's chunk and can draw from a viewpoint. */
@@ -115,7 +115,7 @@ public class CameraBlockEntity extends BlockEntity {
 			.orElse(null);
 	}
 
-	private void developed(ServerLevel level, String by, Optional<Capture> capture) {
+	private void developed(ServerLevel level, String by, float yRot, Optional<Capture> capture) {
 		shooting = false;
 		// Broken while the picture was on its way: the film went with the camera, unspent
 		if (isRemoved()) return;
@@ -124,7 +124,9 @@ public class CameraBlockEntity extends BlockEntity {
 			return;
 		}
 		UUID photo = UUID.randomUUID();
-		if (!Photos.save(level.getServer(), photo, capture.get().png())) return;
+		Photos.Shot shot = new Photos.Shot(photo, level.dimension().identifier().toString(),
+			worldPosition.getX(), worldPosition.getY(), worldPosition.getZ(), yRot, by, System.currentTimeMillis());
+		if (!Photos.save(level.getServer(), shot, capture.get().png())) return;
 		roll = roll.shoot(new Film.Exposure(photo, by));
 		setChanged();
 	}
